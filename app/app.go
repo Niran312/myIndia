@@ -7,12 +7,27 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"myIndia/app/routes"
+	cfg "myIndia/configuration"
 	"myIndia/database"
 )
 
 func Run() {
-	// Creating New Fiber Instance
 	app := fiber.New()
+
+	cfg.LoadConfig()
+	config := cfg.GetConfig()
+
+	db := database.DbInit()
+	//log.Printf("Db values: %v", db)
+
+	//sdf := db.AutoMigrate(&register.User{})
+
+	migrateDb := db.AutoMigrate(&routes.User{})
+	//if migrateDb.Error() != "nil" {
+	//	log.Printf("Error while auto migrate: %v", migrateDb.Error())
+	//	return
+	//}
+	fmt.Printf("Migrate db: %v", migrateDb)
 
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
@@ -20,11 +35,11 @@ func Run() {
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
-	routes.ConfigureRoutes(app)
+	routes.ConfigureRoutes(app, db)
 
-	database.DbInit()
+	//database.DbInit()
 
-	port := fmt.Sprintf(":%s", "3001")
+	port := fmt.Sprintf(":%s", config.Port)
 	err := app.Listen(port)
 
 	if err != nil {

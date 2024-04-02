@@ -1,51 +1,45 @@
 package database
 
 import (
-	"database/sql"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gofiber/fiber/v2/log"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	cfg "myIndia/configuration"
+	"strings"
 )
 
-func DbInit() {
-	dsn := "root:Niran@123@tcp(localhost:3306)/universe?parseTime=true"
+var (
+	// MysqlDB PgDB is the postgres connection handle
+	MysqlDB *gorm.DB
+)
 
-	db, err := sql.Open("mysql", dsn)
+func DbInit() *gorm.DB {
+
+	//DB Connection syntax using env keys
+	//dbconnection = "DB_USER:DB_PASSWORD@tcp(DB_HOST:DB_PORT)/DB_NAME?parseTime=true"
+
+	dsn := cfg.GetConfig().Mysql.MysqlConnectionInfo()
+
+	log.Infof("dsn values: %v", dsn)
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Error),
+	})
+
 	if err != nil {
-		log.Errorf("Error: ", err)
-		panic("Failed to connect to the database")
-	}
-	log.Infof("Database: ", db)
-	log.Info("Database connected succesffuly")
-
-	result, err := db.Query("SELECT id, name FROM state")
-
-	if err != nil {
-		panic(err)
+		log.Info(strings.Repeat("!", 40))
+		log.Info("😏 Could Not Establish Mysql DB Connection")
+		log.Info(strings.Repeat("!", 40))
+		log.Fatal(err)
 	}
 
-	for result.Next() {
+	log.Info(strings.Repeat("-", 40))
+	log.Info("😀 Connected To Mysql DB")
+	log.Info(strings.Repeat("-", 40))
 
-		var id int
-		var name string
+	MysqlDB = db
 
-		// The result object provided Scan  method
-		// to read row data, Scan returns error,
-		// if any. Here we read id and name returned.
-		err = result.Scan(&id, &name)
-
-		// handle error
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Id: %d Name: %s\n", id, name)
-	}
-
-	defer func(db *sql.DB) {
-		err = db.Close()
-		if err != nil {
-			log.Infof("Error while closing the db: ", err)
-		}
-	}(db)
+	return MysqlDB
 }
